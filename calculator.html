@@ -1,0 +1,405 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Trade Risk Calculator</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+  :root{
+    --bg:#0b0f0c;--panel:#111816;--panel2:#151e1a;
+    --accent:#00ff88;--accent2:#19c37d;
+    --border:#1c2a25;--text:#e6f2ec;--muted:#8fa39a;
+    --input-bg:#0d1411;--out-bg:#0f1a15;
+    --neg:#ff5f6d;
+  }
+
+  body{
+    background:var(--bg);color:var(--text);
+    font-family:'Inter',sans-serif;
+    min-height:100vh;display:flex;align-items:center;justify-content:center;
+    padding:24px 16px;
+  }
+
+  /* ── Card ─────────────────────────────────────────────────────── */
+  .card{
+    background:var(--panel);border:1px solid var(--border);
+    border-radius:18px;width:100%;max-width:380px;
+    box-shadow:0 24px 64px rgba(0,0,0,.55);
+    overflow:hidden;
+  }
+
+  /* ── Header ───────────────────────────────────────────────────── */
+  .hdr{
+    display:flex;align-items:center;justify-content:space-between;
+    padding:18px 20px;border-bottom:1px solid var(--border);
+    cursor:move;user-select:none;
+  }
+  .hdr-title{font-family:'Space Grotesk',sans-serif;font-size:14px;font-weight:600}
+  .close-btn{
+    background:none;border:none;color:var(--muted);
+    cursor:pointer;font-size:16px;line-height:1;
+    transition:color .15s;padding:2px 4px;
+  }
+  .close-btn:hover{color:var(--text)}
+
+  /* ── Body ─────────────────────────────────────────────────────── */
+  .body{padding:20px}
+
+  /* ── Field ────────────────────────────────────────────────────── */
+  .field{margin-bottom:14px}
+  .field-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px}
+  .field-label{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.7px;font-weight:500}
+  .field-hint{font-size:11px;color:var(--accent2)}
+  .field-hint.none{color:var(--muted);opacity:.6}
+
+  .input-row{display:flex;gap:8px;align-items:center}
+
+  .field-input{
+    flex:1;background:var(--input-bg);border:1px solid var(--border);
+    border-radius:9px;padding:12px 14px;
+    color:var(--text);font-family:'Space Grotesk',sans-serif;font-size:18px;font-weight:600;
+    outline:none;transition:border-color .18s,box-shadow .18s;
+    min-width:0;
+  }
+  .field-input::placeholder{color:var(--muted);opacity:.5;font-weight:400;font-size:16px}
+  .field-input:focus{border-color:var(--accent2);box-shadow:0 0 0 3px rgba(25,195,125,.12)}
+  .field-input.fresh{border-color:var(--accent);box-shadow:0 0 0 3px rgba(0,255,136,.1)}
+  .field-input.stale{border-color:var(--border);opacity:.7}
+
+  .set-btn{
+    background:none;border:1px solid var(--border);
+    color:var(--muted);border-radius:8px;
+    padding:9px 12px;font-size:11px;font-weight:600;
+    cursor:pointer;font-family:'Inter',sans-serif;
+    white-space:nowrap;transition:all .15s;flex-shrink:0;
+    text-transform:uppercase;letter-spacing:.5px;
+  }
+  .set-btn:hover{border-color:var(--accent2);color:var(--accent2)}
+  .set-btn.saved{border-color:var(--accent);color:var(--accent)}
+
+  /* ── Divider ──────────────────────────────────────────────────── */
+  .divider{border:none;border-top:1px solid var(--border);margin:6px 0 18px}
+
+  /* ── Output ───────────────────────────────────────────────────── */
+  .output-row{
+    display:flex;align-items:center;justify-content:space-between;
+    background:var(--out-bg);border:1px solid var(--border);
+    border-radius:10px;padding:14px 16px;margin-bottom:10px;
+  }
+  .output-row:last-of-type{margin-bottom:0}
+  .out-label{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.7px;font-weight:500}
+  .out-value{
+    font-family:'Space Grotesk',sans-serif;font-size:22px;font-weight:700;
+    color:var(--accent);letter-spacing:-.5px;
+  }
+  .out-value.zero{color:var(--muted)}
+
+  /* ── Clear button ─────────────────────────────────────────────── */
+  .actions{margin-top:18px}
+  .clear-btn{
+    width:100%;background:var(--panel2);border:1px solid var(--border);
+    border-radius:10px;padding:13px;
+    font-family:'Space Grotesk',sans-serif;font-size:13px;font-weight:700;
+    color:var(--muted);cursor:pointer;transition:all .18s;
+    text-transform:uppercase;letter-spacing:.8px;
+  }
+  .clear-btn:hover{border-color:var(--neg);color:var(--neg);background:rgba(255,95,109,.06)}
+
+  /* ── Tooltip flash ────────────────────────────────────────────── */
+  .toast{
+    position:fixed;bottom:24px;left:50%;transform:translateX(-50%);
+    background:var(--accent);color:#0b0f0c;
+    border-radius:8px;padding:8px 18px;font-size:13px;font-weight:700;
+    font-family:'Space Grotesk',sans-serif;
+    opacity:0;pointer-events:none;transition:opacity .2s;
+    white-space:nowrap;z-index:999;
+  }
+  .toast.show{opacity:1}
+</style>
+</head>
+<body>
+
+<div class="card" id="card">
+  <!-- Draggable header -->
+  <div class="hdr" id="hdr">
+    <span class="hdr-title">Trade Risk Calculator</span>
+    <button class="close-btn" onclick="window.close()" title="Close">✕</button>
+  </div>
+
+  <div class="body">
+
+    <!-- Stoploss % -->
+    <div class="field">
+      <div class="field-header">
+        <span class="field-label">Stoploss %</span>
+      </div>
+      <div class="input-row">
+        <input class="field-input" id="inSL" type="number" inputmode="decimal"
+          placeholder="0.00%" step="any" min="0"
+          oninput="onInput()"
+          onfocus="onFieldFocus('inSL')"
+          onblur="onFieldBlur('inSL')">
+      </div>
+    </div>
+
+    <!-- Account Risk % -->
+    <div class="field">
+      <div class="field-header">
+        <span class="field-label">Account Risk %</span>
+        <span class="field-hint none" id="hintR">No default</span>
+      </div>
+      <div class="input-row">
+        <input class="field-input" id="inR" type="number" inputmode="decimal"
+          placeholder="0.00%" step="any" min="0"
+          oninput="onInput()"
+          onfocus="onFieldFocus('inR')"
+          onblur="onFieldBlur('inR')">
+        <button class="set-btn" id="btnR" onclick="setDefault('r')">Save</button>
+      </div>
+    </div>
+
+    <!-- Account Capital -->
+    <div class="field">
+      <div class="field-header">
+        <span class="field-label">Account Capital</span>
+        <span class="field-hint none" id="hintC">No default</span>
+      </div>
+      <div class="input-row">
+        <input class="field-input" id="inC" type="number" inputmode="decimal"
+          placeholder="$0.00" step="any" min="0"
+          oninput="onInput()"
+          onfocus="onFieldFocus('inC')"
+          onblur="onFieldBlur('inC')">
+        <button class="set-btn" id="btnC" onclick="setDefault('c')">Save</button>
+      </div>
+    </div>
+
+    <hr class="divider">
+
+    <!-- Outputs -->
+    <div class="output-row">
+      <span class="out-label">Margin</span>
+      <span class="out-value zero" id="outMargin">$0.00</span>
+    </div>
+    <div class="output-row">
+      <span class="out-label">Risk Amount</span>
+      <span class="out-value zero" id="outRisk">$0.00</span>
+    </div>
+
+    <!-- Clear All -->
+    <div class="actions">
+      <button class="clear-btn" onclick="clearAll()">Clear All</button>
+    </div>
+
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ── Theme ──────────────────────────────────────────────────────────────────
+(function(){
+  const t=localStorage.getItem('tl_theme')||'dark';
+  const r=document.documentElement;
+  if(t==='light'||(t==='system'&&window.matchMedia('(prefers-color-scheme:light)').matches)){
+    r.style.setProperty('--bg','#f6faf8');
+    r.style.setProperty('--panel','#ffffff');
+    r.style.setProperty('--panel2','#f0f7f3');
+    r.style.setProperty('--accent','#19c37d');
+    r.style.setProperty('--accent2','#0fa86a');
+    r.style.setProperty('--border','#d9e5df');
+    r.style.setProperty('--text','#0f1c17');
+    r.style.setProperty('--muted','#6b8578');
+    r.style.setProperty('--input-bg','#eef7f2');
+    r.style.setProperty('--out-bg','#eaf4ee');
+  }
+})();
+
+// ── Storage ────────────────────────────────────────────────────────────────
+const SK = { r:'tl_calc_defR', c:'tl_calc_defC' };
+
+let defR = localStorage.getItem(SK.r) || '';
+let defC = localStorage.getItem(SK.c) || '';
+
+// ── Auto-clear timers (per field) ──────────────────────────────────────────
+// After user inputs a value, 5s after they *leave* the field the value is
+// flagged as "stale". Next time they FOCUS the field it auto-clears instantly.
+const stale = { inSL: false, inR: false, inC: false };
+const staleTimers = { inSL: null, inR: null, inC: null };
+
+function onFieldFocus(id){
+  // Clear the stale timer for this field (they came back before timeout)
+  clearTimeout(staleTimers[id]);
+  const el = document.getElementById(id);
+  if(stale[id]){
+    // Auto-clear stale value
+    el.value = '';
+    el.classList.remove('stale');
+    stale[id] = false;
+    onInput();
+  }
+  el.classList.add('fresh');
+}
+
+function onFieldBlur(id){
+  const el = document.getElementById(id);
+  el.classList.remove('fresh');
+  const val = el.value.trim();
+  if(!val) return;
+  // Start 5s timer — mark stale after 5s so next focus auto-clears
+  clearTimeout(staleTimers[id]);
+  staleTimers[id] = setTimeout(()=>{
+    stale[id] = true;
+    el.classList.add('stale');
+  }, 5000);
+}
+
+// ── Calculation ────────────────────────────────────────────────────────────
+function onInput(){
+  const sl  = parseFloat(document.getElementById('inSL').value) || 0;
+  const rPct = parseFloat(document.getElementById('inR').value)  || 0;
+  const cap  = parseFloat(document.getElementById('inC').value)  || 0;
+
+  const riskAmt = cap * (rPct / 100);
+  const margin  = riskAmt / ((sl / 100) || 1);  // avoid div/0
+
+  const mEl = document.getElementById('outMargin');
+  const rEl = document.getElementById('outRisk');
+
+  const mFmt = money(margin);
+  const rFmt = money(riskAmt);
+
+  mEl.textContent = mFmt;
+  mEl.className   = 'out-value' + (margin > 0 ? '' : ' zero');
+
+  rEl.textContent = rFmt;
+  rEl.className   = 'out-value' + (riskAmt > 0 ? '' : ' zero');
+}
+
+function money(n){
+  if(!Number.isFinite(n) || n === 0) return '$0.00';
+  const fixed = Math.abs(n).toFixed(2);
+  const parts = fixed.split('.');
+  parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+  return (n < 0 ? '-$' : '$') + parts.join('.');
+}
+
+// ── Defaults ───────────────────────────────────────────────────────────────
+function applyDefaults(){
+  if(defR){
+    document.getElementById('inR').value = defR;
+    updateHint('r', defR);
+    document.getElementById('btnR').classList.add('saved');
+  }
+  if(defC){
+    document.getElementById('inC').value = defC;
+    updateHint('c', defC);
+    document.getElementById('btnC').classList.add('saved');
+  }
+  onInput();
+}
+
+function setDefault(which){
+  const id = which === 'r' ? 'inR' : 'inC';
+  const val = document.getElementById(id).value.trim();
+  if(!val){ showToast('Type a value first'); return; }
+  localStorage.setItem(SK[which], val);
+  if(which === 'r'){
+    defR = val;
+    document.getElementById('btnR').classList.add('saved');
+    updateHint('r', val);
+    showToast('Default Risk % saved');
+  } else {
+    defC = val;
+    document.getElementById('btnC').classList.add('saved');
+    updateHint('c', val);
+    showToast('Default Capital saved');
+  }
+}
+
+function updateHint(which, val){
+  if(which === 'r'){
+    const h = document.getElementById('hintR');
+    h.textContent = `Default: ${parseFloat(val).toFixed(2)}%`;
+    h.className = 'field-hint';
+  } else {
+    const h = document.getElementById('hintC');
+    h.textContent = `Default: ${money(parseFloat(val))}`;
+    h.className = 'field-hint';
+  }
+}
+
+// ── Clear All ──────────────────────────────────────────────────────────────
+function clearAll(){
+  // Clear SL always
+  document.getElementById('inSL').value = '';
+  stale.inSL = false;
+  clearTimeout(staleTimers.inSL);
+
+  // Restore R and C to their defaults, otherwise clear
+  if(defR){
+    document.getElementById('inR').value = defR;
+    stale.inR = false; clearTimeout(staleTimers.inR);
+  } else {
+    document.getElementById('inR').value = '';
+    stale.inR = false; clearTimeout(staleTimers.inR);
+  }
+  if(defC){
+    document.getElementById('inC').value = defC;
+    stale.inC = false; clearTimeout(staleTimers.inC);
+  } else {
+    document.getElementById('inC').value = '';
+    stale.inC = false; clearTimeout(staleTimers.inC);
+  }
+
+  // Remove stale classes
+  ['inSL','inR','inC'].forEach(id=>{
+    document.getElementById(id).classList.remove('stale','fresh');
+  });
+
+  onInput();
+}
+
+// ── Toast ──────────────────────────────────────────────────────────────────
+let toastTimer;
+function showToast(msg){
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(()=>t.classList.remove('show'), 2000);
+}
+
+// ── Drag (desktop) ────────────────────────────────────────────────────────
+(function(){
+  const card = document.getElementById('card');
+  const hdr  = document.getElementById('hdr');
+  let drag=false, ox=0, oy=0;
+  hdr.addEventListener('mousedown', e=>{
+    drag=true;
+    card.style.position='fixed';
+    card.style.margin='0';
+    const rect=card.getBoundingClientRect();
+    card.style.top=rect.top+'px';
+    card.style.left=rect.left+'px';
+    card.style.right='auto';
+    card.style.bottom='auto';
+    card.style.transform='none';
+    ox=e.clientX-rect.left; oy=e.clientY-rect.top;
+    e.preventDefault();
+  });
+  document.addEventListener('mousemove', e=>{
+    if(!drag) return;
+    card.style.left=(e.clientX-ox)+'px';
+    card.style.top=(e.clientY-oy)+'px';
+  });
+  document.addEventListener('mouseup', ()=>drag=false);
+})();
+
+// ── Init ───────────────────────────────────────────────────────────────────
+applyDefaults();
+</script>
+</body>
+</html>

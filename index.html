@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TradeLog — Login</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600&family=Inter:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+  :root{--bg:#0b0f0c;--panel:#111816;--accent:#00ff88;--accent2:#19c37d;--border:#1c2a25;--text:#e6f2ec;--muted:#8fa39a}
+  body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;min-height:100vh;display:flex;align-items:center;justify-content:center}
+  .wrap{width:100%;max-width:360px;padding:0 20px}
+  .brand{text-align:center;margin-bottom:48px}
+  .brand h1{font-family:'Space Grotesk',sans-serif;font-size:22px;font-weight:600;letter-spacing:-0.5px}
+  .brand span{color:var(--accent)}
+  .brand p{font-size:13px;color:var(--muted);margin-top:6px}
+  .card{background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:32px}
+  label{display:block;font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.8px;margin-bottom:8px}
+  input[type="password"]{width:100%;background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:12px 14px;color:var(--text);font-family:'Inter',sans-serif;font-size:15px;letter-spacing:4px;outline:none;transition:border-color .2s}
+  input[type="password"]:focus{border-color:var(--accent2)}
+  .btn{width:100%;margin-top:20px;background:var(--accent);color:#0b0f0c;border:none;border-radius:8px;padding:13px;font-family:'Space Grotesk',sans-serif;font-size:14px;font-weight:600;cursor:pointer;transition:opacity .2s}
+  .btn:hover{opacity:.85}
+  .error{margin-top:12px;font-size:13px;color:#ff5f6d;text-align:center;display:none}
+  .error.show{display:block}
+  .hint{text-align:center;font-size:12px;color:var(--muted);margin-top:20px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="brand">
+    <h1>Trade<span>Log</span></h1>
+    <p>Your personal trading journal</p>
+  </div>
+  <div class="card">
+    <label for="pin">Enter PIN</label>
+    <input type="password" id="pin" placeholder="••••" maxlength="6" autocomplete="off">
+    <button class="btn" onclick="login()">Unlock</button>
+    <div class="error" id="err">Incorrect PIN. Try again.</div>
+  </div>
+  <p class="hint">Default PIN: 1234</p>
+</div>
+<script>
+  (function(){
+    const t=localStorage.getItem('tl_theme')||'dark';
+    const r=document.documentElement;
+    if(t==='light'||(t==='system'&&window.matchMedia('(prefers-color-scheme:light)').matches)){
+      r.style.setProperty('--bg','#f6faf8');r.style.setProperty('--panel','#ffffff');
+      r.style.setProperty('--accent','#19c37d');r.style.setProperty('--border','#d9e5df');
+      r.style.setProperty('--text','#0f1c17');r.style.setProperty('--muted','#6b8578');
+    }
+  })();
+  if(!localStorage.getItem('tl_pin')) localStorage.setItem('tl_pin','1234');
+  function login(){
+    const val=document.getElementById('pin').value;
+    if(val===localStorage.getItem('tl_pin')) window.location.href='dashboard.html';
+    else { document.getElementById('err').classList.add('show'); document.getElementById('pin').value=''; }
+  }
+  document.getElementById('pin').addEventListener('keydown',e=>{if(e.key==='Enter')login();});
+</script>
+</body>
+</html>

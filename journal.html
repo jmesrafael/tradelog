@@ -1,0 +1,476 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TradeLog — Journal</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600&family=Inter:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+  :root{--bg:#0b0f0c;--panel:#111816;--accent:#00ff88;--accent2:#19c37d;--border:#1c2a25;--text:#e6f2ec;--muted:#8fa39a}
+  body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;min-height:100vh;display:flex;flex-direction:column}
+  header{display:flex;align-items:center;justify-content:space-between;padding:14px 24px;border-bottom:1px solid var(--border);background:var(--panel);flex-shrink:0}
+  .hleft{display:flex;align-items:center;gap:14px}
+  .back-btn{background:none;border:1px solid var(--border);color:var(--muted);border-radius:7px;padding:7px 13px;font-size:16px;cursor:pointer;font-family:'Inter',sans-serif;transition:all .2s;line-height:1}
+  .back-btn:hover{border-color:var(--accent2);color:var(--text)}
+  .jname{font-family:'Space Grotesk',sans-serif;font-size:16px;font-weight:600}
+  .hright{display:flex;align-items:center;gap:8px}
+  .icon-btn{background:none;border:1px solid var(--border);color:var(--muted);border-radius:7px;padding:7px 12px;font-size:13px;cursor:pointer;font-family:'Inter',sans-serif;transition:all .2s;white-space:nowrap}
+  .icon-btn:hover{border-color:var(--accent2);color:var(--text)}
+  /* Nav */
+  nav{display:flex;gap:2px;padding:10px 24px;border-bottom:1px solid var(--border);background:var(--panel);flex-shrink:0;align-items:center}
+  .tab{padding:8px 16px;background:none;border:none;color:var(--muted);font-size:13px;font-family:'Inter',sans-serif;cursor:pointer;border-radius:7px;transition:all .2s;white-space:nowrap}
+  .tab:hover{color:var(--text);background:rgba(255,255,255,.04)}
+  .tab.active{color:var(--accent);background:rgba(0,255,136,.08)}
+  .tab-spacer{flex:1}
+  /* Tab contents */
+  .tab-content{display:none;flex:1;overflow:hidden}
+  .tab-content.active{display:flex;flex-direction:column}
+  iframe{flex:1;border:none;width:100%;height:100%;min-height:calc(100vh - 108px)}
+  /* PIN overlay */
+  .pin-overlay{position:fixed;inset:0;background:var(--bg);display:flex;align-items:center;justify-content:center;z-index:300}
+  .pin-box{background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:32px;width:320px}
+  .pin-box h3{font-family:'Space Grotesk',sans-serif;font-size:15px;margin-bottom:20px}
+  .pin-input{width:100%;background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:11px 13px;color:var(--text);font-family:'Inter',sans-serif;font-size:15px;letter-spacing:4px;outline:none;margin-bottom:12px;transition:border-color .2s}
+  .pin-input:focus{border-color:var(--accent2)}
+  .btn-primary{background:var(--accent);color:#0b0f0c;border:none;border-radius:8px;padding:12px;font-family:'Space Grotesk',sans-serif;font-size:13px;font-weight:600;cursor:pointer;width:100%}
+  .pin-err{font-size:12px;color:#ff5f6d;margin-top:8px;display:none}
+  .pin-err.show{display:block}
+  /* Settings page (inline tab, not modal) */
+  .settings-panel{flex:1;overflow-y:auto;padding:28px 24px;background:var(--bg)}
+  .settings-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;max-width:960px;margin:0 auto}
+  .settings-grid .full{grid-column:1/-1}
+  @media(max-width:640px){.settings-grid{grid-template-columns:1fr}}
+  /* Section cards */
+  .ssec{background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:20px}
+  .ssec-title{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.8px;margin-bottom:16px;font-weight:600}
+  /* Form fields */
+  .field-row{display:flex;flex-direction:column;gap:5px;margin-bottom:14px}
+  .field-label{font-size:12px;color:var(--muted)}
+  .field-input{background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:10px 12px;color:var(--text);font-family:'Inter',sans-serif;font-size:14px;outline:none;transition:border-color .2s;width:100%}
+  .field-input:focus{border-color:var(--accent2)}
+  .save-row{display:flex;align-items:center;gap:12px;margin-top:16px}
+  .jsave-btn{background:var(--accent);color:#0b0f0c;border:none;border-radius:8px;padding:9px 20px;font-family:'Space Grotesk',sans-serif;font-size:13px;font-weight:600;cursor:pointer;transition:opacity .2s}
+  .jsave-btn:hover{opacity:.85}
+  .saved-msg{font-size:12px;color:var(--accent2);display:none}
+  .saved-msg.show{display:inline}
+  /* Toggles */
+  .toggle-row{display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--border)}
+  .toggle-row:last-child{border-bottom:none;padding-bottom:0}
+  .toggle-row:first-child{padding-top:0}
+  .toggle-info .tname{font-size:13px;font-weight:500;margin-bottom:2px}
+  .toggle-info .tdesc{font-size:11px;color:var(--muted);line-height:1.4}
+  .tswitch{width:36px;height:20px;background:var(--border);border-radius:10px;position:relative;transition:background .2s;cursor:pointer;flex-shrink:0}
+  .tswitch.on{background:var(--accent2)}
+  .tswitch::after{content:'';position:absolute;top:3px;left:3px;width:14px;height:14px;background:#fff;border-radius:50%;transition:transform .2s}
+  .tswitch.on::after{transform:translateX(16px)}
+  /* Tag manager */
+  .tag-list{display:flex;flex-wrap:wrap;gap:5px;margin-bottom:10px;min-height:28px}
+  .stag{display:flex;align-items:center;gap:3px;background:rgba(25,195,125,.12);color:var(--accent2);border-radius:20px;padding:4px 10px;font-size:12px}
+  .stag .rm{cursor:pointer;opacity:.55;font-size:13px;line-height:1}
+  .stag .rm:hover{opacity:1}
+  .tag-add-row{display:flex;gap:6px}
+  .tag-input{flex:1;background:var(--bg);border:1px solid var(--border);border-radius:7px;padding:8px 11px;color:var(--text);font-family:'Inter',sans-serif;font-size:13px;outline:none;transition:border-color .2s}
+  .tag-input:focus{border-color:var(--accent2)}
+  .tag-add-btn{background:var(--accent);color:#0b0f0c;border:none;border-radius:7px;padding:8px 14px;font-size:12px;font-weight:600;cursor:pointer;font-family:'Space Grotesk',sans-serif;white-space:nowrap}
+</style>
+</head>
+<body>
+
+<!-- PIN overlay -->
+<div class="pin-overlay" id="pinOverlay" style="display:none">
+  <div class="pin-box">
+    <h3>Journal PIN Required</h3>
+    <input type="password" class="pin-input" id="jPin" placeholder="••••" maxlength="6">
+    <button class="btn-primary" onclick="checkPin()">Unlock</button>
+    <div class="pin-err" id="pinErr">Incorrect PIN.</div>
+  </div>
+</div>
+
+<header>
+  <div class="hleft">
+    <button class="back-btn" onclick="window.location.href='dashboard.html'" title="Back to Dashboard">‹</button>
+    <span class="jname" id="jnameHdr">Journal</span>
+  </div>
+  <div class="hright">
+    <button class="icon-btn" id="themeBtn" onclick="cycleTheme()">☀ Light</button>
+  </div>
+</header>
+
+<nav id="mainNav">
+  <button class="tab active" data-tab="logs"      onclick="guardedSwitchTab('logs')">Logs</button>
+  <button class="tab"        data-tab="calendar"  onclick="guardedSwitchTab('calendar')">Calendar</button>
+  <button class="tab"        data-tab="gallery"   onclick="guardedSwitchTab('gallery')">Gallery</button>
+  <button class="tab"        data-tab="analytics" onclick="guardedSwitchTab('analytics')">Analytics</button>
+  <div class="tab-spacer"></div>
+  <button class="tab"        data-tab="settings"  onclick="switchTab('settings')">⚙ Settings</button>
+</nav>
+
+<div class="tab-content active" id="tab-logs">
+  <iframe src="logs.html" id="logsFrame" onload="frameReady('logs')"></iframe>
+</div>
+<div class="tab-content" id="tab-calendar">
+  <iframe src="calendar.html" id="calFrame" onload="frameReady('calendar')"></iframe>
+</div>
+<div class="tab-content" id="tab-gallery">
+  <iframe src="gallery.html" id="galFrame" onload="frameReady('gallery')"></iframe>
+</div>
+<div class="tab-content" id="tab-analytics">
+  <iframe src="analytics.html" id="analyticsFrame" onload="frameReady('analytics')"></iframe>
+</div>
+
+<!-- Settings is now a proper tab (no separate page/modal) -->
+<div class="tab-content" id="tab-settings">
+  <div class="settings-panel">
+    <div class="settings-grid">
+
+      <!-- Journal Info -->
+      <div class="ssec">
+        <div class="ssec-title">Journal Info</div>
+        <div class="field-row">
+          <div class="field-label">Account Capital</div>
+          <input type="number" class="field-input" id="js-capital" placeholder="e.g. 10000" oninput="markDirty()">
+        </div>
+        <div class="field-row">
+          <div class="field-label">Journal PIN</div>
+          <input type="password" class="field-input" id="js-pin" placeholder="Leave blank to remove PIN" maxlength="6" autocomplete="new-password" oninput="markDirty()">
+        </div>
+        <div class="save-row">
+          <button class="jsave-btn" onclick="saveJournalSettings()">Save Changes</button>
+          <span class="saved-msg" id="jsSavedMsg">✓ Saved</span>
+        </div>
+      </div>
+
+      <!-- Display Options -->
+      <div class="ssec">
+        <div class="ssec-title">Display Options</div>
+        <div class="toggle-row">
+          <div class="toggle-info">
+            <div class="tname">Show PNL on Dashboard</div>
+            <div class="tdesc">When off, PNL is hidden on the dashboard card</div>
+          </div>
+          <div class="tswitch on" id="showPnlToggle" onclick="toggleFlag('showPnl')"></div>
+        </div>
+        <div class="toggle-row">
+          <div class="toggle-info">
+            <div class="tname">Show Capital on Dashboard</div>
+            <div class="tdesc">When off, capital is hidden on the dashboard card</div>
+          </div>
+          <div class="tswitch on" id="showCapitalToggle" onclick="toggleFlag('showCapital')"></div>
+        </div>
+      </div>
+
+      <!-- Strategy Tags -->
+      <div class="ssec">
+        <div class="ssec-title">Strategy Tags</div>
+        <div class="tag-list" id="stratTagList"></div>
+        <div class="tag-add-row">
+          <input type="text" class="tag-input" id="stratInput" placeholder="Add strategy tag…">
+          <button class="tag-add-btn" onclick="addDefaultTag('strategy')">Add</button>
+        </div>
+      </div>
+
+      <!-- Timeframe Tags -->
+      <div class="ssec">
+        <div class="ssec-title">Timeframe Tags</div>
+        <div class="tag-list" id="tfTagList"></div>
+        <div class="tag-add-row">
+          <input type="text" class="tag-input" id="tfInput" placeholder="Add timeframe tag…">
+          <button class="tag-add-btn" onclick="addDefaultTag('timeframe')">Add</button>
+        </div>
+      </div>
+
+      <!-- Mood Tags -->
+      <div class="ssec">
+        <div class="ssec-title">Mood Tags</div>
+        <div class="tag-list" id="moodTagList"></div>
+        <div class="tag-add-row">
+          <input type="text" class="tag-input" id="moodInput" placeholder="Add mood tag…">
+          <button class="tag-add-btn" onclick="addDefaultTag('mood')">Add</button>
+        </div>
+      </div>
+
+      <!-- Pair Suggestions -->
+      <div class="ssec">
+        <div class="ssec-title">Pair Suggestions</div>
+        <div class="tag-list" id="pairTagList"></div>
+        <div class="tag-add-row">
+          <input type="text" class="tag-input" id="pairInput" placeholder="Add pair…">
+          <button class="tag-add-btn" onclick="addDefaultTag('pair')">Add</button>
+        </div>
+      </div>
+
+      <!-- Mood Colors -->
+      <div class="ssec full">
+        <div class="ssec-title">Mood Colors</div>
+        <div id="moodColorList" style="display:flex;flex-wrap:wrap;gap:10px;align-items:center"></div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<script>
+  // ── Theme ──────────────────────────────────────────────────────────────────
+  let curTheme = localStorage.getItem('tl_theme')||'dark';
+
+  function applyTheme(t){
+    const r=document.documentElement;
+    const dark=t==='dark'||(t==='system'&&!window.matchMedia('(prefers-color-scheme:light)').matches);
+    if(!dark){
+      r.style.setProperty('--bg','#f6faf8');r.style.setProperty('--panel','#ffffff');
+      r.style.setProperty('--accent','#19c37d');r.style.setProperty('--accent2','#0fa86a');
+      r.style.setProperty('--border','#d9e5df');r.style.setProperty('--text','#0f1c17');r.style.setProperty('--muted','#6b8578');
+      document.getElementById('themeBtn').textContent='☾ Dark';
+    } else {
+      r.style.setProperty('--bg','#0b0f0c');r.style.setProperty('--panel','#111816');
+      r.style.setProperty('--accent','#00ff88');r.style.setProperty('--accent2','#19c37d');
+      r.style.setProperty('--border','#1c2a25');r.style.setProperty('--text','#e6f2ec');r.style.setProperty('--muted','#8fa39a');
+      document.getElementById('themeBtn').textContent='☀ Light';
+    }
+    ['logsFrame','calFrame','galFrame','analyticsFrame'].forEach(fid=>{
+      const f=document.getElementById(fid);
+      try{ if(f&&f.contentWindow&&f.contentWindow.applyTheme) f.contentWindow.applyTheme(t); }catch(e){}
+    });
+  }
+
+  function cycleTheme(){
+    curTheme=curTheme==='dark'?'light':'dark';
+    localStorage.setItem('tl_theme',curTheme);
+    applyTheme(curTheme);
+  }
+
+  applyTheme(curTheme);
+
+  // ── Journal load ───────────────────────────────────────────────────────────
+  const jid = localStorage.getItem('tl_current_journal');
+  const journal = (JSON.parse(localStorage.getItem('tl_journals')||'[]')).find(j=>j.id===jid);
+
+  if(journal){
+    document.getElementById('jnameHdr').textContent=journal.name;
+    document.title='TradeLog — '+journal.name;
+    if(journal.pin){ document.getElementById('pinOverlay').style.display='flex'; }
+  }
+
+  function checkPin(){
+    const v=document.getElementById('jPin').value;
+    if(v===journal.pin){ document.getElementById('pinOverlay').style.display='none'; }
+    else{ document.getElementById('pinErr').classList.add('show'); document.getElementById('jPin').value=''; }
+  }
+  document.getElementById('jPin')?.addEventListener('keydown',e=>{ if(e.key==='Enter') checkPin(); });
+
+  // ── Tab switching ──────────────────────────────────────────────────────────
+  let activeTab='logs';
+  const tabNames=['logs','calendar','gallery','analytics','settings'];
+
+  function switchTab(name){
+    tabNames.forEach(t=>{
+      document.getElementById('tab-'+t).classList.toggle('active', t===name);
+      document.querySelector(`[data-tab="${t}"]`)?.classList.toggle('active', t===name);
+    });
+    activeTab=name;
+    if(name==='calendar')  reloadFrame('calFrame','calendar.html');
+    if(name==='gallery')   reloadFrame('galFrame','gallery.html');
+    if(name==='analytics') reloadFrame('analyticsFrame','analytics.html');
+    if(name==='settings'){ onSettingsOpen(); settingsDirty=false; }
+  }
+
+  function reloadFrame(fid,src){
+    const f=document.getElementById(fid);
+    if(f){ f.src=src+'?t='+Date.now(); }
+  }
+
+  function frameReady(name){
+    const fid={logs:'logsFrame',calendar:'calFrame',gallery:'galFrame',analytics:'analyticsFrame'}[name];
+    if(fid){ const f=document.getElementById(fid); try{ if(f&&f.contentWindow&&f.contentWindow.applyTheme) f.contentWindow.applyTheme(curTheme); }catch(e){} }
+  }
+
+  // ── Settings ───────────────────────────────────────────────────────────────
+  function onSettingsOpen(){
+    populateJournalSettings();
+    renderSettingsTags();
+    renderMoodColors();
+  }
+
+  function getJournals(){ return JSON.parse(localStorage.getItem('tl_journals')||'[]'); }
+
+  function populateJournalSettings(){
+    const j=getJournals().find(x=>x.id===jid);
+    if(!j) return;
+    document.getElementById('js-capital').value=j.capital||'';
+    document.getElementById('js-pin').value='';
+    document.getElementById('js-pin').placeholder=j.pin?'PIN set — enter new to change, blank to remove':'Leave blank for no PIN';
+    document.getElementById('showPnlToggle').classList.toggle('on', j.showPnl!==false);
+    document.getElementById('showCapitalToggle').classList.toggle('on', j.showCapital!==false);
+  }
+
+  function saveJournalSettings(){
+    const list=getJournals();
+    const idx=list.findIndex(x=>x.id===jid);
+    if(idx<0) return;
+    list[idx].capital=document.getElementById('js-capital').value.trim();
+    const pin=document.getElementById('js-pin').value;
+    if(pin.trim()) list[idx].pin=pin.trim();
+    else if(pin==='') list[idx].pin='';
+    localStorage.setItem('tl_journals',JSON.stringify(list));
+    // Mark clean — no more unsaved changes
+    settingsDirty = false;
+    const msg=document.getElementById('jsSavedMsg');
+    msg.classList.add('show');
+    setTimeout(()=>msg.classList.remove('show'),2000);
+  }
+
+  function toggleFlag(flag){
+    const list=getJournals();
+    const idx=list.findIndex(x=>x.id===jid);
+    if(idx<0) return;
+    const cur=list[idx][flag]!==false;
+    list[idx][flag]=!cur;
+    localStorage.setItem('tl_journals',JSON.stringify(list));
+    const toggleId=flag==='showPnl'?'showPnlToggle':'showCapitalToggle';
+    document.getElementById(toggleId).classList.toggle('on',!cur);
+  }
+
+  // ── Tag Management ─────────────────────────────────────────────────────────
+  const DEFAULTS={
+    strategy:['Breakout','Reversal','Trend Continuation','Liquidity Sweep','Scalp','Swing'],
+    timeframe:['M1','M5','M15','H1','H4','D1','W1'],
+    pair:['EURUSD','GBPUSD','BTCUSD','XAUUSD','USDJPY','GBPJPY'],
+    mood:['Euphoric','Confident','Neutral','Doubtful','Anxious','Fearful','Revenge']
+  };
+
+  function getTagList(type){
+    const keys={strategy:'tl_strategies',timeframe:'tl_timeframes',pair:'tl_pairs',mood:'tl_moods'};
+    if(!localStorage.getItem(keys[type])) localStorage.setItem(keys[type],JSON.stringify(DEFAULTS[type]||[]));
+    return JSON.parse(localStorage.getItem(keys[type])||'[]');
+  }
+
+  function saveTagList(type,list){
+    const keys={strategy:'tl_strategies',timeframe:'tl_timeframes',pair:'tl_pairs',mood:'tl_moods'};
+    localStorage.setItem(keys[type],JSON.stringify(list));
+  }
+
+  function renderSettingsTags(){
+    const map={strategy:'stratTagList',timeframe:'tfTagList',pair:'pairTagList',mood:'moodTagList'};
+    Object.entries(map).forEach(([type,elId])=>{
+      const el=document.getElementById(elId);
+      if(!el) return;
+      const list=getTagList(type);
+      el.innerHTML=list.map(t=>`
+        <span class="stag">${escHtml(t)}<span class="rm" onclick="removeDefaultTag('${type}','${escHtml(t)}')">×</span></span>
+      `).join('');
+    });
+  }
+
+  function addDefaultTag(type){
+    const inputs={strategy:'stratInput',timeframe:'tfInput',pair:'pairInput',mood:'moodInput'};
+    const inp=document.getElementById(inputs[type]);
+    if(!inp) return;
+    const val=inp.value.trim();
+    if(!val) return;
+    const v=type==='pair'?val.toUpperCase():val;
+    const list=getTagList(type);
+    if(!list.includes(v)){ list.push(v); saveTagList(type,list); }
+    inp.value='';
+    renderSettingsTags();
+    if(type==='mood') renderMoodColors();
+  }
+
+  function removeDefaultTag(type,val){
+    saveTagList(type,getTagList(type).filter(t=>t!==val));
+    renderSettingsTags();
+    if(type==='mood') renderMoodColors();
+  }
+
+  ['stratInput','tfInput','pairInput','moodInput'].forEach((id,i)=>{
+    const types=['strategy','timeframe','pair','mood'];
+    document.getElementById(id)?.addEventListener('keydown',e=>{ if(e.key==='Enter') addDefaultTag(types[i]); });
+  });
+
+  function escHtml(s){ const d=document.createElement('div'); d.textContent=s; return d.innerHTML; }
+
+  // ── Mood Colors ────────────────────────────────────────────────────────────
+  const DEFAULT_MOOD_COLORS={
+    'Euphoric':'#f59e0b','Confident':'#22c55e','Neutral':'#64748b',
+    'Doubtful':'#f97316','Anxious':'#ef4444','Fearful':'#dc2626','Revenge':'#a855f7'
+  };
+
+  function getMoodColors(){
+    return JSON.parse(localStorage.getItem('tl_mood_colors')||JSON.stringify(DEFAULT_MOOD_COLORS));
+  }
+
+  function renderMoodColors(){
+    const moods=getTagList('mood');
+    const colors=getMoodColors();
+    const container=document.getElementById('moodColorList');
+    if(!container) return;
+    container.innerHTML=moods.map(m=>{
+      const col=colors[m]||'#8fa39a';
+      return `<div style="display:flex;align-items:center;gap:6px;background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:6px 10px">
+        <span style="font-size:12px;color:var(--text)">${escHtml(m)}</span>
+        <input type="color" value="${col}" title="Color for ${escHtml(m)}"
+          onchange="saveMoodColor('${escHtml(m)}',this.value)"
+          style="width:28px;height:22px;border:none;background:none;cursor:pointer;padding:0">
+      </div>`;
+    }).join('');
+  }
+
+  function saveMoodColor(mood,color){
+    const colors=getMoodColors();
+    colors[mood]=color;
+    localStorage.setItem('tl_mood_colors',JSON.stringify(colors));
+  }
+
+  // ── Unsaved Settings Guard ─────────────────────────────────────────────────
+  let settingsDirty = false;
+  let pendingTabTarget = null;
+
+  function markDirty(){ settingsDirty = true; }
+
+  // All tab nav goes through here — checks for unsaved changes first
+  function guardedSwitchTab(name){
+    if(activeTab === 'settings' && settingsDirty && name !== 'settings'){
+      pendingTabTarget = name;
+      document.getElementById('unsavedOverlay').style.display = 'flex';
+      return;
+    }
+    switchTab(name);
+  }
+
+  function closeUnsaved(){
+    document.getElementById('unsavedOverlay').style.display = 'none';
+    pendingTabTarget = null;
+    document.querySelector('.jsave-btn')?.focus();
+  }
+
+  function discardAndLeave(){
+    document.getElementById('unsavedOverlay').style.display = 'none';
+    settingsDirty = false;
+    populateJournalSettings(); // restore fields to last saved state
+    const target = pendingTabTarget || 'logs';
+    pendingTabTarget = null;
+    switchTab(target);
+  }
+
+  // Browser-level guard when navigating away from the page
+  window.addEventListener('beforeunload', function(e){
+    if(settingsDirty && activeTab === 'settings'){
+      e.preventDefault();
+      e.returnValue = '';
+    }
+  });
+</script>
+
+<!-- Unsaved Settings Warning -->
+<div id="unsavedOverlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:900;align-items:center;justify-content:center">
+  <div style="background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:28px;width:100%;max-width:360px;margin:20px">
+    <h4 style="font-family:'Space Grotesk',sans-serif;font-size:15px;font-weight:600;margin-bottom:8px">Unsaved Changes</h4>
+    <p style="font-size:13px;color:var(--muted);margin-bottom:20px;line-height:1.6">You have unsaved changes in Journal Info (Capital or PIN). Save them before leaving, or discard to continue.</p>
+    <div style="display:flex;gap:8px">
+      <button onclick="discardAndLeave()" style="flex:1;background:none;border:1px solid var(--border);color:var(--muted);border-radius:7px;padding:10px;font-family:'Inter',sans-serif;font-size:13px;cursor:pointer">Discard & Leave</button>
+      <button onclick="closeUnsaved()" style="flex:1;background:var(--accent);color:#0b0f0c;border:none;border-radius:7px;padding:10px;font-family:'Space Grotesk',sans-serif;font-size:13px;font-weight:600;cursor:pointer">Stay & Save</button>
+    </div>
+  </div>
+</div>
+</body>
+</html>
