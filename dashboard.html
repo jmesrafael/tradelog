@@ -14,6 +14,7 @@
   .logo{font-family:'Space Grotesk',sans-serif;font-size:18px;font-weight:600}
   .logo span{color:var(--accent)}
   .hactions{display:flex;gap:10px;align-items:center}
+  .user-email{font-size:12px;color:var(--muted);max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   .btn-ghost{background:none;border:1px solid var(--border);color:var(--muted);border-radius:7px;padding:8px 14px;font-family:'Inter',sans-serif;font-size:13px;cursor:pointer;transition:all .2s}
   .btn-ghost:hover{border-color:var(--accent2);color:var(--text)}
   main{padding:32px;max-width:1100px;margin:0 auto}
@@ -21,6 +22,7 @@
   .sec-hdr h2{font-family:'Space Grotesk',sans-serif;font-size:16px;font-weight:600}
   .btn-primary{background:var(--accent);color:#0b0f0c;border:none;border-radius:8px;padding:10px 18px;font-family:'Space Grotesk',sans-serif;font-size:13px;font-weight:600;cursor:pointer;transition:opacity .2s}
   .btn-primary:hover{opacity:.85}
+  .btn-primary:disabled{opacity:.5;cursor:not-allowed}
   .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:16px}
   .jcard{background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:24px;transition:border-color .2s;position:relative}
   .jcard:hover{border-color:var(--accent2)}
@@ -33,8 +35,9 @@
   .jcard .pnl-val.neg{color:#ff5f6d}
   .jcard .open-btn{display:inline-block;font-size:12px;color:var(--accent);border:1px solid var(--accent);border-radius:6px;padding:6px 12px;background:none;cursor:pointer;font-family:'Inter',sans-serif;transition:all .2s}
   .jcard .open-btn:hover{background:var(--accent);color:#0b0f0c}
-  .lock-icon{position:absolute;top:16px;right:16px;font-size:14px;color:var(--muted);line-height:1;opacity:.7}
-  .empty{color:var(--muted);font-size:14px;padding:48px 0;text-align:center;grid-column:1/-1}
+  .lock-icon{position:absolute;top:16px;right:16px;font-size:14px;color:var(--muted);opacity:.7}
+  .empty{color:var(--muted);font-size:14px;padding:48px 0;text-align:center;grid-column:1/-1;line-height:1.8}
+  .loading{color:var(--muted);font-size:14px;padding:48px 0;text-align:center;grid-column:1/-1}
   /* Modal */
   .overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:100;align-items:center;justify-content:center}
   .overlay.open{display:flex}
@@ -56,7 +59,10 @@
   .theme-btn.active{border-color:var(--accent);color:var(--accent)}
   .theme-btn:hover{border-color:var(--accent2)}
   .divider{border:none;border-top:1px solid var(--border);margin:16px 0}
-  .user-email{font-size:12px;color:var(--muted);max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .err-toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#ff5f6d;color:#fff;border-radius:8px;padding:10px 20px;font-size:13px;font-weight:600;font-family:'Space Grotesk',sans-serif;opacity:0;pointer-events:none;transition:opacity .2s;z-index:999;white-space:nowrap}
+  .err-toast.show{opacity:1}
+  .spinner{display:inline-block;width:12px;height:12px;border:2px solid rgba(11,15,12,.3);border-top-color:#0b0f0c;border-radius:50%;animation:spin .7s linear infinite;margin-right:6px;vertical-align:middle}
+  @keyframes spin{to{transform:rotate(360deg)}}
 </style>
 </head>
 <body>
@@ -65,15 +71,15 @@
   <div class="hactions">
     <span class="user-email" id="userEmail"></span>
     <button class="btn-ghost" onclick="openSettings()">Settings</button>
-    <button class="btn-ghost" onclick="logout()">Logout</button>
+    <button class="btn-ghost" onclick="doLogout()">Logout</button>
   </div>
 </header>
 <main>
   <div class="sec-hdr">
     <h2>Journals</h2>
-    <button class="btn-primary" onclick="openCreate()">+ Create Journal</button>
+    <button class="btn-primary" id="createBtn" onclick="openCreate()">+ Create Journal</button>
   </div>
-  <div class="grid" id="grid"></div>
+  <div class="grid" id="grid"><div class="loading">Loading…</div></div>
 </main>
 
 <!-- Create Journal Modal -->
@@ -85,7 +91,7 @@
     <div class="field"><label>Account Capital (optional)</label><input type="number" id="jCapital" placeholder="e.g. 10000"></div>
     <div class="mactions">
       <button class="btn-cancel" onclick="closeCreate()">Cancel</button>
-      <button class="btn-primary" onclick="createJournal()">Create</button>
+      <button class="btn-primary" id="createJournalBtn" onclick="createJournal()">Create</button>
     </div>
   </div>
 </div>
@@ -104,16 +110,25 @@
     </div>
     <hr class="divider">
     <div class="ssec">
-      <h4>Change App PIN</h4>
-      <div class="field" style="margin-bottom:8px"><input type="password" id="newPin" placeholder="New PIN (min 4 digits)"></div>
-      <button class="btn-primary" style="width:100%" onclick="changePin()">Update PIN</button>
+      <h4>Account</h4>
+      <p style="font-size:13px;color:var(--muted);margin-bottom:12px" id="settingsEmail"></p>
+      <button class="btn-ghost" style="width:100%" onclick="doLogout()">Sign Out</button>
     </div>
     <button class="btn-cancel" style="width:100%;margin-top:8px" onclick="closeSettings()">Close</button>
   </div>
 </div>
 
+<div class="err-toast" id="errToast"></div>
+
 <script>
-  // ── Theme ──────────────────────────────────────────────
+  // ── Supabase ────────────────────────────────────────────────────────────────
+  const SUPABASE_URL = 'https://tcwqvqtsjwxzvwmtegme.supabase.co';
+  const SUPABASE_KEY = 'sb_publishable_u2qTIMdIlImmxG1UcQsvUA_82vklUvY';
+  const db = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+  let currentUser = null;
+
+  // ── Theme ───────────────────────────────────────────────────────────────────
   function applyTheme(t){
     const r=document.documentElement;
     const dark=t==='dark'||(t==='system'&&!window.matchMedia('(prefers-color-scheme:light)').matches);
@@ -134,98 +149,99 @@
   }
   applyTheme(localStorage.getItem('tl_theme')||'dark');
 
-  // ── Auth ───────────────────────────────────────────────
-  // ── Supabase ────────────────────────────────────────────────────────────
-  const SUPABASE_URL = 'https://tcwqvqtsjwxzvwmtegme.supabase.co';
-  const SUPABASE_KEY = 'sb_publishable_u2qTIMdIlImmxG1UcQsvUA_82vklUvY';
-  const db = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-
-  // Auth guard — redirect to login if not signed in
+  // ── Auth guard ──────────────────────────────────────────────────────────────
   (async()=>{
     const { data:{ session } } = await db.auth.getSession();
     if(!session){ window.location.href='login.html'; return; }
-    document.getElementById('userEmail').textContent = session.user.email;
+    currentUser = session.user;
+    document.getElementById('userEmail').textContent = currentUser.email;
+    document.getElementById('settingsEmail').textContent = currentUser.email;
+    await loadJournals();
   })();
 
-  async function logout(){
+  async function doLogout(){
     await db.auth.signOut();
     window.location.href='login.html';
   }
 
-  // ── Create modal ───────────────────────────────────────
-  function openCreate(){ document.getElementById('createModal').classList.add('open'); setTimeout(()=>document.getElementById('jName').focus(),100); }
-  function closeCreate(){
-    document.getElementById('createModal').classList.remove('open');
-    ['jName','jPin','jCapital'].forEach(id=>document.getElementById(id).value='');
+  // ── Journals — Supabase CRUD ────────────────────────────────────────────────
+  async function loadJournals(){
+    const { data, error } = await db
+      .from('journals')
+      .select('*')
+      .order('created_at', { ascending: true });
+    if(error){ showToast('Error loading journals: '+error.message); return; }
+    render(data || []);
   }
 
-  // ── Settings modal ─────────────────────────────────────
-  function openSettings(){
-    const t=localStorage.getItem('tl_theme')||'dark';
-    document.querySelectorAll('.theme-btn').forEach(b=>b.classList.toggle('active',b.dataset.theme===t));
-    document.getElementById('settingsModal').classList.add('open');
-  }
-  function closeSettings(){ document.getElementById('settingsModal').classList.remove('open'); }
-  function changePin(){
-    const v=document.getElementById('newPin').value.trim();
-    if(v.length<4){ alert('PIN must be at least 4 digits.'); return; }
-    localStorage.setItem('tl_pin',v);
-    document.getElementById('newPin').value='';
-    alert('PIN updated successfully.');
-  }
-
-  // ── Journals CRUD ──────────────────────────────────────
-  function getJournals(){ return JSON.parse(localStorage.getItem('tl_journals')||'[]'); }
-  function saveJournals(j){ localStorage.setItem('tl_journals',JSON.stringify(j)); }
-
-  function createJournal(){
-    const name=document.getElementById('jName').value.trim();
+  async function createJournal(){
+    const name = document.getElementById('jName').value.trim();
     if(!name){ document.getElementById('jName').focus(); return; }
-    const pin=document.getElementById('jPin').value.trim();
-    const capital=document.getElementById('jCapital').value.trim();
-    const journals=getJournals();
-    journals.push({ id:'j_'+Date.now(), name, pin, capital });
-    saveJournals(journals);
+    const pin     = document.getElementById('jPin').value.trim();
+    const capital = document.getElementById('jCapital').value.trim();
+
+    const btn = document.getElementById('createJournalBtn');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner"></span>Creating…';
+
+    const { data, error } = await db.from('journals').insert({
+      user_id:      currentUser.id,
+      name,
+      pin_hash:     pin || null,        // stored as plain text for now (journal PIN, not auth)
+      capital:      capital ? parseFloat(capital) : null,
+      show_pnl:     true,
+      show_capital: true
+    }).select().single();
+
+    btn.disabled = false;
+    btn.textContent = 'Create';
+
+    if(error){ showToast('Error: '+error.message); return; }
     closeCreate();
-    render();
+    await loadJournals();
   }
 
-  function openJournal(id){
-    localStorage.setItem('tl_current_journal',id);
-    window.location.href='journal.html';
+  async function openJournal(id){
+    // Store just the ID in localStorage so other pages know which journal is open
+    localStorage.setItem('tl_current_journal', id);
+    window.location.href = 'journal.html';
   }
 
+  // ── PNL from trades (still localStorage for now, migrated in next step) ────
   function fmtPnl(v){ const n=parseFloat(v); if(isNaN(n)) return null; return (n>=0?'+':'-')+'$'+Math.abs(n).toFixed(2); }
 
   function getJournalPnl(jid){
     const trades = JSON.parse(localStorage.getItem('tl_trades_'+jid)||'[]');
-    const total = trades.reduce((s,t)=>{ const p=parseFloat(t.pnl); return s+(isNaN(p)?0:p); },0);
-    const hasTrades = trades.some(t=>t.pnl!==''&&!isNaN(parseFloat(t.pnl)));
-    return hasTrades ? total : null;
+    const valid  = trades.filter(t=>t.pnl!==''&&!isNaN(parseFloat(t.pnl)));
+    if(!valid.length) return null;
+    return valid.reduce((s,t)=>s+parseFloat(t.pnl),0);
   }
 
-  function render(){
-    const journals=getJournals();
-    const grid=document.getElementById('grid');
-    if(!journals.length){ grid.innerHTML='<div class="empty">No journals yet. Create one to get started.</div>'; return; }
-    grid.innerHTML=journals.map(j=>{
-      const showPnl = j.showPnl !== false;
-      const showCap = j.showCapital !== false;
+  // ── Render journal cards ────────────────────────────────────────────────────
+  function render(journals){
+    const grid = document.getElementById('grid');
+    if(!journals.length){
+      grid.innerHTML='<div class="empty">No journals yet.<br>Click <strong>+ Create Journal</strong> to get started.</div>';
+      return;
+    }
+    grid.innerHTML = journals.map(j=>{
+      const showPnl = j.show_pnl !== false;
+      const showCap = j.show_capital !== false;
+      const capital = j.capital;
       const pnlTotal = getJournalPnl(j.id);
-      // Capital row — only show if enabled and capital is set
-      const capHtml = (showCap && j.capital)
-        ? `<div class="cap">Capital: $${Number(j.capital).toLocaleString()}</div>`
-        : '';
-      // PNL row — only show if enabled and there are trades with PNL
+
+      const capHtml = (showCap && capital)
+        ? `<div class="cap">Capital: $${Number(capital).toLocaleString()}</div>` : '';
+
       let pnlHtml = '';
       if(showPnl && pnlTotal !== null){
         const cls = pnlTotal >= 0 ? 'pos' : 'neg';
         pnlHtml = `<div class="pnl-row"><span class="pnl-label">PNL</span><span class="pnl-val ${cls}">${fmtPnl(pnlTotal)}</span></div>`;
       }
-      // Lock icon if journal has a PIN
-      const lockHtml = j.pin ? `<span class="lock-icon" title="PIN protected">🔒</span>` : '';
-      return `
-      <div class="jcard">
+
+      const lockHtml = j.pin_hash ? `<span class="lock-icon" title="PIN protected">🔒</span>` : '';
+
+      return `<div class="jcard">
         ${lockHtml}
         <h3>${escHtml(j.name)}</h3>
         ${capHtml}
@@ -237,22 +253,40 @@
 
   function escHtml(s){ const d=document.createElement('div'); d.textContent=s; return d.innerHTML; }
 
-  // Close modals on backdrop click
+  // ── Modals ──────────────────────────────────────────────────────────────────
+  function openCreate(){
+    document.getElementById('createModal').classList.add('open');
+    setTimeout(()=>document.getElementById('jName').focus(),100);
+  }
+  function closeCreate(){
+    document.getElementById('createModal').classList.remove('open');
+    ['jName','jPin','jCapital'].forEach(id=>document.getElementById(id).value='');
+  }
+  function openSettings(){
+    const t=localStorage.getItem('tl_theme')||'dark';
+    document.querySelectorAll('.theme-btn').forEach(b=>b.classList.toggle('active',b.dataset.theme===t));
+    document.getElementById('settingsModal').classList.add('open');
+  }
+  function closeSettings(){ document.getElementById('settingsModal').classList.remove('open'); }
+
   ['createModal','settingsModal'].forEach(id=>{
-    document.getElementById(id).addEventListener('click',function(e){ if(e.target===this) this.classList.remove('open'); });
+    document.getElementById(id).addEventListener('click',function(e){
+      if(e.target===this) this.classList.remove('open');
+    });
   });
 
-  render();
+  // ── Toast ───────────────────────────────────────────────────────────────────
+  let toastTimer;
+  function showToast(msg){
+    const t=document.getElementById('errToast');
+    t.textContent=msg; t.classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer=setTimeout(()=>t.classList.remove('show'),3500);
+  }
 
-  // Re-render whenever localStorage changes (trade added/edited/deleted in another tab)
-  window.addEventListener('storage', function(e){
-    if(e.key && e.key.startsWith('tl_trades_')) render();
-    if(e.key === 'tl_journals') render();
-  });
-
-  // Re-render when user navigates back to this page (focus or pageshow)
-  window.addEventListener('pageshow', function(){ render(); });
-  window.addEventListener('focus', function(){ render(); });
+  // ── Reload on focus (in case trades changed) ────────────────────────────────
+  window.addEventListener('focus', ()=>{ if(currentUser) loadJournals(); });
+  window.addEventListener('pageshow', ()=>{ if(currentUser) loadJournals(); });
 </script>
 </body>
 </html>
