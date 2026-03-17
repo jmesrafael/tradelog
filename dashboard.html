@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>TradeLog — Dashboard</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600&family=Inter:wght@400;500&display=swap" rel="stylesheet">
 <style>
   *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
@@ -55,12 +56,14 @@
   .theme-btn.active{border-color:var(--accent);color:var(--accent)}
   .theme-btn:hover{border-color:var(--accent2)}
   .divider{border:none;border-top:1px solid var(--border);margin:16px 0}
+  .user-email{font-size:12px;color:var(--muted);max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 </style>
 </head>
 <body>
 <header>
   <div class="logo">Trade<span>Log</span></div>
   <div class="hactions">
+    <span class="user-email" id="userEmail"></span>
     <button class="btn-ghost" onclick="openSettings()">Settings</button>
     <button class="btn-ghost" onclick="logout()">Logout</button>
   </div>
@@ -132,7 +135,22 @@
   applyTheme(localStorage.getItem('tl_theme')||'dark');
 
   // ── Auth ───────────────────────────────────────────────
-  function logout(){ window.location.href='index.html'; }
+  // ── Supabase ────────────────────────────────────────────────────────────
+  const SUPABASE_URL = 'https://tcwqvqtsjwxzvwmtegme.supabase.co';
+  const SUPABASE_KEY = 'sb_publishable_u2qTIMdIlImmxG1UcQsvUA_82vklUvY';
+  const db = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+  // Auth guard — redirect to login if not signed in
+  (async()=>{
+    const { data:{ session } } = await db.auth.getSession();
+    if(!session){ window.location.href='login.html'; return; }
+    document.getElementById('userEmail').textContent = session.user.email;
+  })();
+
+  async function logout(){
+    await db.auth.signOut();
+    window.location.href='login.html';
+  }
 
   // ── Create modal ───────────────────────────────────────
   function openCreate(){ document.getElementById('createModal').classList.add('open'); setTimeout(()=>document.getElementById('jName').focus(),100); }

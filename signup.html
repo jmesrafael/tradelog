@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TradeLog — Sign Up</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600&family=Inter:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+  :root{--bg:#0b0f0c;--panel:#111816;--accent:#00ff88;--accent2:#19c37d;--border:#1c2a25;--text:#e6f2ec;--muted:#8fa39a}
+  body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px}
+  .wrap{width:100%;max-width:400px}
+  .brand{text-align:center;margin-bottom:40px}
+  .brand h1{font-family:'Space Grotesk',sans-serif;font-size:26px;font-weight:700;letter-spacing:-0.5px}
+  .brand span{color:var(--accent)}
+  .brand p{font-size:13px;color:var(--muted);margin-top:6px}
+  .card{background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:32px}
+  .card h2{font-family:'Space Grotesk',sans-serif;font-size:17px;font-weight:600;margin-bottom:24px}
+  .field{margin-bottom:16px}
+  .field label{display:block;font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.7px;margin-bottom:7px;font-weight:500}
+  .field input{width:100%;background:var(--bg);border:1px solid var(--border);border-radius:9px;padding:12px 14px;color:var(--text);font-family:'Inter',sans-serif;font-size:14px;outline:none;transition:border-color .2s}
+  .field input:focus{border-color:var(--accent2)}
+  .field input.invalid{border-color:#ff5f6d}
+  .hint{font-size:11px;color:var(--muted);margin-top:5px}
+  .strength{height:3px;border-radius:2px;margin-top:6px;transition:all .3s;background:var(--border)}
+  .strength.weak{background:#ff5f6d;width:33%}
+  .strength.medium{background:#f59e0b;width:66%}
+  .strength.strong{background:var(--accent);width:100%}
+  .btn-primary{width:100%;background:var(--accent);color:#0b0f0c;border:none;border-radius:9px;padding:13px;font-family:'Space Grotesk',sans-serif;font-size:14px;font-weight:700;cursor:pointer;transition:opacity .2s;margin-top:8px}
+  .btn-primary:hover{opacity:.85}
+  .btn-primary:disabled{opacity:.5;cursor:not-allowed}
+  .link-row{text-align:center;margin-top:20px;font-size:13px;color:var(--muted)}
+  .link-row a{color:var(--accent2);text-decoration:none;font-weight:500}
+  .link-row a:hover{color:var(--accent)}
+  .error-msg{background:rgba(255,95,109,.1);border:1px solid rgba(255,95,109,.3);color:#ff5f6d;border-radius:8px;padding:10px 14px;font-size:13px;margin-bottom:16px;display:none}
+  .error-msg.show{display:block}
+  .confirm-screen{text-align:center;display:none}
+  .confirm-screen .icon{font-size:48px;margin-bottom:16px}
+  .confirm-screen h3{font-family:'Space Grotesk',sans-serif;font-size:18px;font-weight:600;margin-bottom:10px}
+  .confirm-screen p{font-size:14px;color:var(--muted);line-height:1.7}
+  .confirm-screen a{color:var(--accent2);text-decoration:none}
+  .spinner{display:inline-block;width:14px;height:14px;border:2px solid rgba(0,0,0,.3);border-top-color:#0b0f0c;border-radius:50%;animation:spin .7s linear infinite;margin-right:6px;vertical-align:middle}
+  @keyframes spin{to{transform:rotate(360deg)}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="brand">
+    <h1>Trade<span>Log</span></h1>
+    <p>Your personal trading journal</p>
+  </div>
+  <div class="card">
+    <!-- Sign up form -->
+    <div id="formView">
+      <h2>Create your account</h2>
+      <div class="error-msg" id="errMsg"></div>
+      <div class="field">
+        <label>Email</label>
+        <input type="email" id="email" placeholder="you@example.com" autocomplete="email">
+      </div>
+      <div class="field">
+        <label>Password</label>
+        <input type="password" id="password" placeholder="At least 8 characters"
+          autocomplete="new-password" oninput="checkStrength(this.value)">
+        <div class="strength" id="strengthBar"></div>
+        <div class="hint" id="strengthHint"></div>
+      </div>
+      <div class="field">
+        <label>Confirm Password</label>
+        <input type="password" id="confirm" placeholder="Repeat your password" autocomplete="new-password">
+      </div>
+      <button class="btn-primary" id="signupBtn" onclick="doSignup()">Create Account</button>
+      <div class="link-row">
+        Already have an account? <a href="login.html">Sign in</a>
+      </div>
+    </div>
+
+    <!-- Confirm email screen -->
+    <div class="confirm-screen" id="confirmView">
+      <div class="icon">📬</div>
+      <h3>Check your email</h3>
+      <p>We sent a confirmation link to<br><strong id="sentTo"></strong><br><br>
+        Click the link in the email to activate your account, then <a href="login.html">sign in</a>.</p>
+    </div>
+  </div>
+</div>
+
+<script>
+  const SUPABASE_URL = 'https://tcwqvqtsjwxzvwmtegme.supabase.co';
+  const SUPABASE_KEY = 'sb_publishable_u2qTIMdIlImmxG1UcQsvUA_82vklUvY';
+  const db = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+  // Already logged in?
+  (async()=>{
+    const { data:{ session } } = await db.auth.getSession();
+    if(session) window.location.href = 'dashboard.html';
+  })();
+
+  document.addEventListener('keydown', e=>{ if(e.key==='Enter') doSignup(); });
+
+  function checkStrength(val){
+    const bar  = document.getElementById('strengthBar');
+    const hint = document.getElementById('strengthHint');
+    if(!val){ bar.className='strength'; hint.textContent=''; return; }
+    const hasUpper = /[A-Z]/.test(val);
+    const hasNum   = /[0-9]/.test(val);
+    const hasSpec  = /[^A-Za-z0-9]/.test(val);
+    const score    = (val.length>=8?1:0)+(hasUpper?1:0)+(hasNum?1:0)+(hasSpec?1:0);
+    if(score<=1){ bar.className='strength weak'; hint.textContent='Weak password'; hint.style.color='#ff5f6d'; }
+    else if(score<=2){ bar.className='strength medium'; hint.textContent='Could be stronger'; hint.style.color='#f59e0b'; }
+    else{ bar.className='strength strong'; hint.textContent='Strong password'; hint.style.color='var(--accent)'; }
+  }
+
+  function showError(msg){
+    const el=document.getElementById('errMsg');
+    el.textContent=msg; el.classList.add('show');
+  }
+
+  function setLoading(on){
+    const btn=document.getElementById('signupBtn');
+    btn.disabled=on;
+    btn.innerHTML=on?'<span class="spinner"></span>Creating account…':'Create Account';
+  }
+
+  async function doSignup(){
+    const email   = document.getElementById('email').value.trim();
+    const pass    = document.getElementById('password').value;
+    const confirm = document.getElementById('confirm').value;
+    document.getElementById('errMsg').classList.remove('show');
+    if(!email){ showError('Please enter your email.'); return; }
+    if(pass.length < 8){ showError('Password must be at least 8 characters.'); return; }
+    if(pass !== confirm){ showError('Passwords do not match.'); return; }
+    setLoading(true);
+    const { data, error } = await db.auth.signUp({
+      email,
+      password: pass,
+      options: { emailRedirectTo: 'https://tradillo.vercel.app/dashboard.html' }
+    });
+    setLoading(false);
+    if(error){ showError(error.message); return; }
+    // Show confirm screen
+    document.getElementById('formView').style.display='none';
+    document.getElementById('sentTo').textContent=email;
+    document.getElementById('confirmView').style.display='block';
+  }
+</script>
+</body>
+</html>

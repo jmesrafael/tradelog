@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TradeLog — Login</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600&family=Inter:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+  :root{--bg:#0b0f0c;--panel:#111816;--accent:#00ff88;--accent2:#19c37d;--border:#1c2a25;--text:#e6f2ec;--muted:#8fa39a}
+  body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px}
+  .wrap{width:100%;max-width:400px}
+  .brand{text-align:center;margin-bottom:40px}
+  .brand h1{font-family:'Space Grotesk',sans-serif;font-size:26px;font-weight:700;letter-spacing:-0.5px}
+  .brand span{color:var(--accent)}
+  .brand p{font-size:13px;color:var(--muted);margin-top:6px}
+  .card{background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:32px}
+  .card h2{font-family:'Space Grotesk',sans-serif;font-size:17px;font-weight:600;margin-bottom:24px}
+  .field{margin-bottom:16px}
+  .field label{display:block;font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.7px;margin-bottom:7px;font-weight:500}
+  .field input{width:100%;background:var(--bg);border:1px solid var(--border);border-radius:9px;padding:12px 14px;color:var(--text);font-family:'Inter',sans-serif;font-size:14px;outline:none;transition:border-color .2s}
+  .field input:focus{border-color:var(--accent2)}
+  .btn-primary{width:100%;background:var(--accent);color:#0b0f0c;border:none;border-radius:9px;padding:13px;font-family:'Space Grotesk',sans-serif;font-size:14px;font-weight:700;cursor:pointer;transition:opacity .2s;margin-top:8px}
+  .btn-primary:hover{opacity:.85}
+  .btn-primary:disabled{opacity:.5;cursor:not-allowed}
+  .divider{display:flex;align-items:center;gap:12px;margin:20px 0}
+  .divider span{font-size:12px;color:var(--muted);white-space:nowrap}
+  .divider::before,.divider::after{content:'';flex:1;height:1px;background:var(--border)}
+  .link-row{text-align:center;margin-top:20px;font-size:13px;color:var(--muted)}
+  .link-row a{color:var(--accent2);text-decoration:none;font-weight:500}
+  .link-row a:hover{color:var(--accent)}
+  .error-msg{background:rgba(255,95,109,.1);border:1px solid rgba(255,95,109,.3);color:#ff5f6d;border-radius:8px;padding:10px 14px;font-size:13px;margin-bottom:16px;display:none}
+  .error-msg.show{display:block}
+  .success-msg{background:rgba(0,255,136,.08);border:1px solid rgba(0,255,136,.25);color:var(--accent);border-radius:8px;padding:10px 14px;font-size:13px;margin-bottom:16px;display:none}
+  .success-msg.show{display:block}
+  .spinner{display:inline-block;width:14px;height:14px;border:2px solid rgba(0,0,0,.3);border-top-color:#0b0f0c;border-radius:50%;animation:spin .7s linear infinite;margin-right:6px;vertical-align:middle}
+  @keyframes spin{to{transform:rotate(360deg)}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="brand">
+    <h1>Trade<span>Log</span></h1>
+    <p>Your personal trading journal</p>
+  </div>
+  <div class="card">
+    <h2>Sign in to your account</h2>
+    <div class="error-msg" id="errMsg"></div>
+    <div class="success-msg" id="successMsg"></div>
+    <div class="field">
+      <label>Email</label>
+      <input type="email" id="email" placeholder="you@example.com" autocomplete="email">
+    </div>
+    <div class="field">
+      <label>Password</label>
+      <input type="password" id="password" placeholder="••••••••" autocomplete="current-password">
+    </div>
+    <button class="btn-primary" id="loginBtn" onclick="doLogin()">Sign In</button>
+    <div class="divider"><span>or</span></div>
+    <div class="link-row">
+      Don't have an account? <a href="signup.html">Create one</a>
+    </div>
+    <div class="link-row" style="margin-top:10px">
+      <a href="#" onclick="showForgot()">Forgot password?</a>
+    </div>
+  </div>
+</div>
+
+<script>
+  const SUPABASE_URL = 'https://tcwqvqtsjwxzvwmtegme.supabase.co';
+  const SUPABASE_KEY = 'sb_publishable_u2qTIMdIlImmxG1UcQsvUA_82vklUvY';
+  const db = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+  // If already logged in, go straight to dashboard
+  (async()=>{
+    const { data:{ session } } = await db.auth.getSession();
+    if(session) window.location.href = 'dashboard.html';
+  })();
+
+  // Enter key submits
+  document.addEventListener('keydown', e=>{ if(e.key==='Enter') doLogin(); });
+
+  function setLoading(on){
+    const btn = document.getElementById('loginBtn');
+    btn.disabled = on;
+    btn.innerHTML = on ? '<span class="spinner"></span>Signing in…' : 'Sign In';
+  }
+
+  function showError(msg){
+    const el = document.getElementById('errMsg');
+    el.textContent = msg;
+    el.classList.add('show');
+    document.getElementById('successMsg').classList.remove('show');
+  }
+
+  function showSuccess(msg){
+    const el = document.getElementById('successMsg');
+    el.textContent = msg;
+    el.classList.add('show');
+    document.getElementById('errMsg').classList.remove('show');
+  }
+
+  async function doLogin(){
+    const email    = document.getElementById('email').value.trim();
+    const password = document.getElementById('password').value;
+    if(!email || !password){ showError('Please enter your email and password.'); return; }
+    setLoading(true);
+    const { data, error } = await db.auth.signInWithPassword({ email, password });
+    setLoading(false);
+    if(error){ showError(error.message); return; }
+    window.location.href = 'dashboard.html';
+  }
+
+  async function showForgot(){
+    const email = document.getElementById('email').value.trim();
+    if(!email){ showError('Enter your email address first, then click Forgot password.'); return; }
+    const { error } = await db.auth.resetPasswordForEmail(email, {
+      redirectTo: 'https://tradillo.vercel.app/login.html'
+    });
+    if(error){ showError(error.message); return; }
+    showSuccess('Password reset email sent. Check your inbox.');
+  }
+</script>
+</body>
+</html>

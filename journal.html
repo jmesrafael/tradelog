@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>TradeLog — Journal</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600&family=Inter:wght@400;500&display=swap" rel="stylesheet">
 <style>
   *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
@@ -211,6 +212,15 @@
 </div>
 
 <script>
+  // ── Supabase auth guard ──────────────────────────────────────────────────
+  const SUPABASE_URL = 'https://tcwqvqtsjwxzvwmtegme.supabase.co';
+  const SUPABASE_KEY = 'sb_publishable_u2qTIMdIlImmxG1UcQsvUA_82vklUvY';
+  const db = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+  (async()=>{
+    const { data:{ session } } = await db.auth.getSession();
+    if(!session) window.location.href='login.html';
+  })();
+
   // ── Theme ──────────────────────────────────────────────────────────────────
   let curTheme = localStorage.getItem('tl_theme')||'dark';
 
